@@ -24,12 +24,6 @@ wheels/
 *.egg
 MANIFEST
 
-# PDF Processing
-context/*.pdf
-output/
-report/
-temp_chunks/
-*.log
 
 # Config (keep example)
 config.yaml

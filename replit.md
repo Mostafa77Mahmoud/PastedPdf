@@ -123,6 +123,13 @@ report/
 
 ## Recent Changes
 
+- **2024-11-20: ENHANCED FEATURES FOR GEMINI OPTIMIZATION**
+  - ✅ **Markdown Structuring:** Auto-detects headers based on font size and adds `#` and `##` for hierarchical structure
+  - ✅ **Smart Quranic Noise Removal:** Removes broken font artifacts (U T S R Q) while preserving valid English terms (SUKUK, MURABAHA, SWAPS, etc.)
+  - ✅ **RTL Formatting:** Proper Arabic text rendering with arabic-reshaper and python-bidi
+  - ✅ New script: `process_with_markdown.py` for enhanced processing
+  - ✅ Updated config with `enable_markdown`, `remove_quranic_noise` settings
+
 - 2024-01-20: Initial project creation with all core services
 - Focus on AAOIFI Arabic and English document processing
 - Implemented strict table protection (3+ lines rule)
@@ -168,6 +175,36 @@ text:
 # On Linux:
 sudo apt-get install tesseract-ocr tesseract-ocr-ara tesseract-ocr-eng poppler-utils ghostscript
 ```
+
+## Enhanced Features (NEW!)
+
+### Markdown Structuring
+The new `EnhancedTextProcessor` service detects document structure based on font size:
+- **H1 headers (`#`):** Font size ≥ 16pt (configurable)
+- **H2 headers (`##`):** Font size ≥ 14pt (configurable)
+- **Body text:** Regular paragraphs
+
+This helps Gemini understand document hierarchy and perform intelligent chunking.
+
+### Quranic Noise Removal
+Custom fonts for Quranic verses extract as garbage Latin characters. The enhanced processor:
+- Detects and removes sequences like "U T S R Q P"
+- **Preserves** valid financial/Islamic terms: SUKUK, MURABAHA, SWAPS, SHARIA, etc.
+- Replaces Quranic text with `[نص قرآني]` (configurable)
+
+Protected terms list includes 40+ Islamic finance and accounting terms.
+
+### Usage
+```bash
+# Method 1: Enhanced processing only
+python3 scripts/process_with_markdown.py context/AAOIFI_AR.pdf
+
+# Method 2: Full pipeline (OCR + cleaning + enhancement)
+python3 scripts/clean_pdfs.py
+python3 scripts/process_with_markdown.py output/AAOIFI_AR_cleaned.pdf
+```
+
+See `QUICK_START_ENHANCED.md` and `ENHANCED_FEATURES_AR.md` for details.
 
 ## Next Steps (Future Enhancements)
 

@@ -1,0 +1,55 @@
+للحصول على أفضل نتيجة ممكنة تتفوق على الـ PDF الأصلي وتجعل Gemini يفهم الملف بدقة متناهية، يجب أن ننتقل من مجرد "استخراج النص" إلى "هيكلة وتنظيف النص" (Text Structuring & Sanitization).
+إليك الخطة الكاملة والتعديلات المطلوبة، متبوعة بـ البرومبت (Prompt) الذي يجب أن تعطيه لوكيل Replit.
+ملخص التعديلات التقنية المطلوبة (الخطة):
+تغيير المكتبة: الانتقال من PyPDF2 (الضعيفة مع العربية) إلى pdfplumber أو pymupdf (fitz) لأنها تتيح التحكم في "صندوق الإحاطة" (Bounding Box) لاستبعاد الهوامش والرؤوس والتذييلات بدقة.
+الفلترة المكانية (Spatial Filtering): بدلاً من استخراج الصفحة كاملة، سنطلب من السكريبت تجاهل أعلى 10% وأسفل 10% من الصفحة (لإزالة ترويسة "المعايير الشرعية" وأرقام الصفحات المكررة).
+تنظيف "الضوضاء" (Noise Cleaning): استخدام Regex لحذف الحروف الإنجليزية العشوائية (التي تظهر مكان الآيات القرآنية) والرموز غير المفهومة.
+إصلاح اتجاه النص والأرقام: استخدام خوارزمية لإعادة ترتيب الجمل التي تحتوي على أرقام وأقواس لتظهر بشكل منطقي (Logical Order) وليس بصري (Visual Order).
+الهيكلة (Markdown Formatting): تحويل العناوين الكبيرة إلى صيغة Markdown (#, ##) ليفهم Gemini أن هذا "عنوان رئيسي" وهذا "نص فرعي".
+البرومبت الموجه لوكيل Replit (باللغة الإنجليزية لضمان دقة الكود)
+انسخ هذا النص وضعه في Replit Agent:
+code
+Markdown
+**Role:** You are an expert Python developer specializing in NLP, PDF processing, and Arabic text handling for RAG (Retrieval-Augmented Generation) pipelines.
+
+**Objective:** Create a robust Python script to convert a complex Arabic PDF (Islamic Finance Standards) into a clean, structured Markdown text file. The output must be optimized for LLM ingestion (Gemini File Search).
+
+**Input:** A PDF file named `source.pdf` (I will upload it).
+
+**Key Challenges to Solve:**
+1.  **Headers/Footers:** The PDF has repeating headers and footers on every page. These must be cropped out based on Y-coordinates, not just text matching.
+2.  **Encoding Artifacts:** The PDF uses custom fonts for Quranic verses, which extract as garbage English characters (e.g., "U T S R Q"). These sequences must be removed or replaced with a placeholder like "[Quranic Verse]".
+3.  **Arabic Layout:** The text is RTL. Ensure numbers and brackets appear in the correct logical order, not reversed.
+4.  **Structure:** Detect titles based on font size or boldness and format them as Markdown headers (#, ##).
+
+**Requirements for the Script:**
+
+1.  **Library:** Use `pdfplumber` (preferred) or `pymupdf` (fitz). Do NOT use PyPDF2.
+2.  **Crop Strategy:** Define a bounding box to exclude the top 10% and bottom 10% of each page to remove headers/footers physically before extraction.
+3.  **Text Cleaning Functions:**
+    *   **Regex Filter:** Remove sequences of random Latin/English characters that appear in the middle of Arabic text (these are the broken Quran fonts). Keep valid English terms if they look like real words (e.g., "SWAPS", "OPTIONS"), but remove garbage like "X Y Z".
+    *   **Deduplication:** Check if a line is identical to the previous line and remove it.
+    *   **Normalization:** Normalize Arabic Alef (أ, إ, آ -> ا) and Ya (ي -> ى) for consistent search, or keep them standard if the text quality is high.
+    *   **Whitespace:** Collapse multiple spaces into one and remove excessive newlines.
+4.  **Formatting:**
+    *   If a line is short and has a larger font size than the body text, treat it as a Header and prepend `## ` to it.
+    *   Ensure bullet points or numbered lists are preserved on their own lines.
+
+**Output:** Save the final result as `cleaned_standards.md`.
+
+**Code Structure:**
+Please write the code in a modular way with a `clean_text(text)` function and a `process_pdf(pdf_path)` function.
+شرح لماذا سيعطيك هذا البرومبت "أداءً خارقاً" مع Gemini:
+صيغة Markdown (.md):
+عندما يرى Gemini علامة # أو ##، يفهم فوراً أن ما يليها هو "موضوع جديد" أو "عنوان". هذا يساعده في تقسيم الملف (Chunking) بشكل ذكي جداً بدلاً من قصه في منتصف الجملة.
+إزالة الهوامش (Cropping):
+في الملف الذي أرسلته لي، كانت جملة "المعايير الشرعية" تتكرر وتدخل في وسط الكلام. البرومبت يطلب من السكريبت "قص" أعلى وأسفل الصفحة برمجياً قبل قراءة النص، مما يدمج الفقرات المقطوعة بين الصفحات بشكل سليم.
+معالجة "القمامة النصية" (Garbage Collection):
+طلبت من الوكيل تحديداً حذف الحروف الإنجليزية العشوائية (مثل U T S R) التي ظهرت مكان الآيات. هذا يمنع Gemini من الارتباك ويجعل النص نظيفاً.
+الاحتفاظ بالمصطلحات الإنجليزية المهمة:
+البرومبت ذكي بما يكفي ليقول: "احذف الإنجليزي العشوائي، ولكن اترك الكلمات الحقيقية مثل SWAPS". لأن هذه مصطلحات مالية مهمة في الملف.
+الخطوة التالية بعد تشغيل السكريبت:
+بعد أن يعطيك Replit الملف الناتج cleaned_standards.md:
+افتح الملف وتأكد أن العناوين تبدأ بـ #.
+تأكد أن الآيات القرآنية إما حذفت (وهذا أفضل من بقاء رموز غريبة) أو استبدلت بكلمة [Quranic Verse].
+ارفع هذا الملف لـ Gemini، وستلاحظ فرقاً هائلاً في دقة الإجابات، خاصة عند سؤاله عن "تعريفات" أو "شروط" محددة، لأنه سيعرف أين يبدأ المعيار وأين ينتهي.

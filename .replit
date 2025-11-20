@@ -1,10 +1,10 @@
-modules = ["python-3.11"]
+modules = ["bash", "python-3.11"]
 [agent]
 expertMode = true
 
 [nix]
 channel = "stable-25_05"
-packages = ["freetype", "ghostscript", "gumbo", "harfbuzz", "jbig2dec", "jbig2enc", "lcms2", "libimagequant", "libjpeg", "libjpeg_turbo", "libtiff", "libwebp", "libxcrypt", "libyaml", "mupdf", "openjpeg", "pngquant", "swig", "tcl", "tesseract", "tk", "unpaper", "xcbuild", "zlib", "poppler"]
+packages = ["freetype", "ghostscript", "gumbo", "harfbuzz", "jbig2dec", "jbig2enc", "lcms2", "libimagequant", "libjpeg", "libjpeg_turbo", "libtiff", "libwebp", "libxcrypt", "libyaml", "mupdf", "openjpeg", "pngquant", "poppler", "swig", "tcl", "tesseract", "tk", "unpaper", "xcbuild", "zlib"]
 
 [workflows]
 runButton = "Project"
@@ -22,9 +22,9 @@ args = "PDF Cleaning Tool"
 name = "PDF Cleaning Tool"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python3 main.py"
-
-[workflows.workflow.metadata]
-outputType = "console"

@@ -75,11 +75,32 @@ class EnhancedTextProcessor:
         # NFKC normalization converts ﺔﺤﻔﺼﻟﺍ (presentation forms) to ةحفصلا (base characters)
         normalized = unicodedata.normalize('NFKC', text)
         
-        # Step 2: Reverse RTL sequences to get logical order
-        # For now, we'll keep the normalized form which should be readable
-        # TODO: If needed, add pyfribidi for full visual->logical conversion
+        # Step 2: Remove duplicate consecutive characters (common in this PDF)
+        # "ةةييععررششللاا" -> "ةيعرشلا"
+        deduplicated = []
+        for i, char in enumerate(normalized):
+            if i == 0 or char != normalized[i-1]:
+                deduplicated.append(char)
+        deduplicated_text = ''.join(deduplicated)
         
-        return normalized
+        # Step 3: Reverse Arabic words to convert from visual to logical order
+        # "ةيعرشلا" (visual) -> "الشرعية" (logical)
+        words = deduplicated_text.split()
+        result_words = []
+        
+        for word in words:
+            # Check if word contains Arabic characters
+            has_arabic = any('\u0600' <= c <= '\u06FF' for c in word)
+            
+            if has_arabic:
+                # Reverse the word to get logical order
+                reversed_word = word[::-1]
+                result_words.append(reversed_word)
+            else:
+                # Keep non-Arabic words as-is
+                result_words.append(word)
+        
+        return ' '.join(result_words)
     
     def extract_text_with_structure_batched(self, pdf_path: str, batch_size: int = 50, max_pages: int = None) -> Dict:
         """
@@ -359,19 +380,9 @@ class EnhancedTextProcessor:
             if not is_duplicate:
                 unique_words.append(word)
         
-        # Detect if line is primarily Arabic (RTL)
-        all_text = ''.join(w['text'] for w in unique_words)
-        arabic_chars = sum(1 for c in all_text if '\u0600' <= c <= '\u06FF')
-        total_chars = len([c for c in all_text if c.strip()])
-        is_rtl = arabic_chars > (total_chars * 0.3)  # >30% Arabic = RTL
-        
-        # Sort words by horizontal position
-        # For RTL (Arabic): sort right-to-left (descending x position)
-        # For LTR (English): sort left-to-right (ascending x position)
-        if is_rtl:
-            sorted_words = sorted(unique_words, key=lambda w: -w['x0'])  # RTL: right to left
-        else:
-            sorted_words = sorted(unique_words, key=lambda w: w['x0'])   # LTR: left to right
+        # Sort words by horizontal position (left to right) - pdfplumber already handles text direction
+        # DO NOT reverse for RTL - the PDF extraction already provides words in logical order
+        sorted_words = sorted(unique_words, key=lambda w: w['x0'])
         
         # Extract text
         text = ' '.join(w['text'] for w in sorted_words)

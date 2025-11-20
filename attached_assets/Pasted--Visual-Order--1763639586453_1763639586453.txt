@@ -1,0 +1,34 @@
+المشكلة: النص يظهر بـ "الترتيب البصري" (Visual Order)، أي أن الكلمات مرتبة من اليسار لليمين كما تظهر على الشاشات التي لا تدعم العربية، بينما Gemini (وجميع محررات النصوص الحديثة) يحتاج النص بـ "الترتيب المنطقي" (Logical Order).
+السبب هو أن الوكيل في الخطوة السابقة قام بتفعيل مكتبة python-bidi لقلب النص لكي يظهر لك "صحيحاً" في شاشة التيرمينال السوداء، لكن هذا "أفسد" الملف الفعلي عند حفظه.
+الحل: يجب أن نأمر الوكيل بإلغاء استخدام bidi.algorithm.get_display عند حفظ ملف الـ Markdown المخصص لـ Gemini.
+انسخ هذا البرومبت وأرسله للوكيل فوراً لإصلاح هذه المشكلة النهائية:
+code
+Markdown
+I have inspected the output file `output/Shariaah-Standards-ARB_structured.md` and found a critical issue.
+
+**The Problem:**
+The Arabic text is saved in **Visual Order** (reversed), not **Logical Order**.
+*   Current Output: "ةعجارملاو ةبساحملا ريياعم سلجم" (Reads Left-to-Right).
+*   Required Output: "مجلس معايير المحاسبة والمراجعة" (Reads Right-to-Left in standard editors).
+
+**The Cause:**
+You are applying `bidi.algorithm.get_display()` (or similar reversal logic) to the text before saving it to the Markdown file. This is good for the terminal printout, but **BAD for the file itself**.
+
+**The Fix (Urgent):**
+Please modify `services/enhanced_text_processor.py` immediately:
+
+1.  **For the Markdown file (`_structured.md`):**
+    *   **DISABLE** `bidi.algorithm.get_display`.
+    *   **DISABLE** `arabic_reshaper` (unless the letters are disjointed in the raw PDF extraction).
+    *   Save the text exactly as extracted (Logical Order). Standard UTF-8 handles Arabic direction automatically.
+
+2.  **For the Terminal/Console Output ONLY:**
+    *   You can keep using `bidi` + `reshaper` just for printing to the console so I can read it, but **DO NOT** write this reversed text to the file.
+
+3.  **Action:**
+    *   Apply this fix.
+    *   Re-run the processing on the **first 50 pages only** (`process_sample.py`) to verify.
+    *   Show me the first 3 lines of the NEW output file to confirm it is now in Logical Order.
+ماذا سيفعل هذا البرومبت؟
+سيجبر السكريبت على التوقف عن "شقلبة" الجمل داخل الملف. ستعود الجمل لطبيعتها (المنطقية) التي يفهمها Gemini.
+بمجرد أن يؤكد لك الوكيل أن الملف الجديد يبدأ بـ "مجلس معايير..." وليس "سلجم..."، تكون قد انتهيت.

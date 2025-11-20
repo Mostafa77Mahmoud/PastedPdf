@@ -344,8 +344,34 @@ class EnhancedTextProcessor:
     def _process_line(self, words: List[dict]) -> dict:
         """Process a line of words to extract text and font info"""
         
-        # Sort words by horizontal position (RTL-aware)
-        sorted_words = sorted(words, key=lambda w: w['x0'])
+        # Remove duplicate words (same text at similar position)
+        unique_words = []
+        for word in words:
+            # Check if this word is a duplicate of an existing word
+            is_duplicate = False
+            for existing in unique_words:
+                # Same text and overlapping position (within 5 pixels)
+                if (word['text'] == existing['text'] and 
+                    abs(word['x0'] - existing['x0']) < 5 and
+                    abs(word['top'] - existing['top']) < 2):
+                    is_duplicate = True
+                    break
+            if not is_duplicate:
+                unique_words.append(word)
+        
+        # Detect if line is primarily Arabic (RTL)
+        all_text = ''.join(w['text'] for w in unique_words)
+        arabic_chars = sum(1 for c in all_text if '\u0600' <= c <= '\u06FF')
+        total_chars = len([c for c in all_text if c.strip()])
+        is_rtl = arabic_chars > (total_chars * 0.3)  # >30% Arabic = RTL
+        
+        # Sort words by horizontal position
+        # For RTL (Arabic): sort right-to-left (descending x position)
+        # For LTR (English): sort left-to-right (ascending x position)
+        if is_rtl:
+            sorted_words = sorted(unique_words, key=lambda w: -w['x0'])  # RTL: right to left
+        else:
+            sorted_words = sorted(unique_words, key=lambda w: w['x0'])   # LTR: left to right
         
         # Extract text
         text = ' '.join(w['text'] for w in sorted_words)

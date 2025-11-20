@@ -1,0 +1,31 @@
+النتيجة التي وصل إليها الوكيل ممتازة تقنياً، لكن هناك كارثة صغيرة في طريقة عرض النص العربي في التقرير النهائي، ويجب أن نتأكد أنها "مشكلة عرض فقط" وليست "مشكلة في الملف نفسه".
+لاحظ ما قاله الوكيل في النهاية:
+# يميظنتلا لكيهلا (الهيكل التنظيمي)
+## ةماعلا ةناملأا (الأمانة العامة)
+النص العربي هنا مقلوب (Reversed)!
+كلمة "الهيكل التنظيمي" مكتوبة "يميظنتلا لكيهلا".
+هل هذه مشكلة؟
+نعم: إذا كان الملف _structured.md يحتوي فعلاً على النص مقلوباً هكذا، فإن Gemini سيقرأه بصعوبة بالغة أو يفشل في فهمه.
+لا (غالباً): إذا كان هذا مجرد "عرض" في التيرمينال (Terminal) الخاص بـ Replit لأن التيرمينال لا يدعم العربية، بينما الملف نفسه سليم.
+كيف تتأكد وتصلح الأمر؟ (الخطوة الحاسمة)
+قبل أن تعالج الملف الكامل (1388 صفحة)، يجب أن تتأكد من أن الملف الناتج SAMPLE_50pages_structured.md يحتوي على نص عربي سليم وليس مقلوباً.
+البرومبت المطلوب للوكيل الآن:
+code
+Markdown
+Great progress! The structure detection is working perfectly.
+
+However, I noticed in your summary that the Arabic text appeared reversed (e.g., "يميظنتلا لكيهلا").
+
+**Critical Verification Step:**
+Please run a quick check on the `output/SAMPLE_50pages_structured.md` file.
+1.  Read the first 5 lines of the file.
+2.  Print them to the console.
+3.  **IMPORTANT:** If the text in the file is indeed reversed (like "يميظنتلا"), this is WRONG for Gemini. Gemini needs standard logical Arabic (like "التنظيمي").
+4.  If it is reversed, please adjust the `save_markdown_file` function to **NOT** apply `bidi.algorithm.get_display` on the Markdown output. We only need `arabic_reshaper` (sometimes) or just standard UTF-8 without reshaping for LLMs.
+
+**Goal:** The output file must contain readable Arabic text when opened in a standard text editor (Not visual order, but logical order).
+
+Please verify and fix if necessary, then confirm when I can download the sample.
+لماذا هذا البرومبت؟
+لأن مكتبات مثل python-bidi تقوم بقلب النص ليظهر بشكل صحيح في البرامج القديمة التي لا تدعم العربية (مثل بعض التيرمينالات). لكن الذكاء الاصطناعي (LLMs) والبرامج الحديثة تحتاج النص بترتيبه الطبيعي. إذا أعطيت Gemini نصاً مقلوباً، ستنخفض دقة البحث بشكل كبير.
+بعد هذا التأكيد، ستكون جاهزاً تماماً لمعالجة الملف الضخم.

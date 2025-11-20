@@ -1,0 +1,94 @@
+# PDF Cleaning Configuration File
+# Copy this to config.yaml and adjust settings as needed
+
+# Input/Output directories
+input_dir: "context"
+output_dir: "output"
+report_dir: "report"
+
+# Language settings per file (ara, eng, ara+eng)
+language_per_file:
+  AAOIFI_AR.pdf: "ara"
+  AAOIFI_EN.pdf: "eng"
+
+# OCR settings
+ocr:
+  # Maximum pages per chunk to avoid RAM issues (200 recommended for large files)
+  chunk_size: 200
+  # OCR confidence threshold (0.0-1.0). Pages below this skip aggressive cleaning
+  confidence_threshold: 0.70
+  # Enable deskew (straighten rotated text)
+  deskew: true
+  # Enable background removal
+  remove_background: true
+  # Enable automatic page rotation
+  rotate_pages: true
+  # Output type: pdfa, pdf, or pdfa-1
+  output_type: "pdfa"
+
+# Header/Footer detection settings
+header_footer:
+  # Threshold for considering text as repeated header/footer (0.0-1.0)
+  # 0.85 means text must appear in 85% of pages
+  detection_threshold: 0.85
+  # Number of pages to sample from start and end
+  sample_pages: 50
+  # Use all three detection algorithms and pick best
+  use_multi_algorithm: true
+  # Algorithms: text_repetition, bbox_matching, fuzzy_matching
+  algorithms:
+    - "text_repetition"
+    - "bbox_matching"
+    - "fuzzy_matching"
+
+# Image handling settings
+images:
+  # Minimum area threshold (0.0-1.0 as percentage of page)
+  # Images smaller than this may be removed if decorative
+  area_threshold: 0.05
+  # Minimum OCR lines to consider image as table/important (3+ recommended)
+  min_lines_for_table: 3
+  # Keep all tables regardless of size
+  keep_tables: true
+  # Remove decorative images (logos, borders, etc.)
+  remove_decorative: true
+
+# Text extraction settings
+text:
+  # Preserve original Unicode (no reshaping or modification)
+  preserve_unicode: true
+  # Auto-detect RTL/LTR per page
+  auto_detect_direction: true
+  # Unicode normalization form (NFC, NFD, NFKC, NFKD)
+  normalization: "NFC"
+  # Preserve whitespace and newlines
+  preserve_formatting: true
+
+# Preview settings
+preview:
+  # Number of sample pages to show in preview
+  sample_pages: 4
+  # Generate before/after comparison images
+  generate_comparisons: true
+  # Preview mode: if true, only generate preview without final cleaning
+  preview_only: false
+
+# Safety settings
+safety:
+  # Create backup copies (raw.pdf, ocr.pdf, cleaned.pdf)
+  create_backups: true
+  # Never modify original files
+  preserve_originals: true
+  # Skip cleaning if confidence is too low
+  skip_on_low_confidence: true
+
+# Output settings
+output:
+  # Generate detailed JSON report
+  generate_json_report: true
+  # Generate markdown report
+  generate_markdown_report: true
+  # Generate chunk simulation for Gemini File Search testing
+  generate_chunk_simulation: true
+  # Chunk size for simulation (characters)
+  simulation_chunk_size: 2000

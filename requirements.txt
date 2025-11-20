@@ -1,0 +1,13 @@
+ocrmypdf>=15.0.0
+PyMuPDF>=1.23.0
+pdfplumber>=0.10.0
+PyPDF2>=3.0.0
+Pillow>=10.0.0
+pytesseract>=0.3.10
+python-bidi>=0.4.2
+PyYAML>=6.0
+tqdm>=4.65.0
+regex>=2023.0.0
+numpy>=1.24.0
+opencv-python-headless>=4.8.0
+arabic-reshaper>=3.0.0

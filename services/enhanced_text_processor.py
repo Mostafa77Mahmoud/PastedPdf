@@ -62,8 +62,12 @@ class EnhancedTextProcessor:
         """
         Convert Arabic text from visual/presentation order to logical order
         
-        PDFs often store Arabic text in presentation form (shaped glyphs in visual order).
+        PDFs store Arabic text in presentation form (shaped glyphs in REVERSED visual order).
         This method converts it back to logical order for LLM processing.
+        
+        CRITICAL FIX: Must reverse BOTH:
+        1. Character order within each word (ﺔﻤﻠﻛ → كلمة)
+        2. Word order in the sentence (العام الأمين كلمة → كلمة الأمين العام)
         
         Args:
             text: Text in visual/presentation order
@@ -73,7 +77,6 @@ class EnhancedTextProcessor:
         """
         # Step 1: Normalize to convert presentation forms to base characters
         # NFKC normalization converts ﺔﺤﻔﺼﻟﺍ (presentation forms) to ةحفصلا (base characters)
-        # NFKD also works, but NFKC is more compact
         normalized = unicodedata.normalize('NFKC', text)
         
         # Step 2: Check if text is in presentation forms (visual order)
@@ -83,24 +86,29 @@ class EnhancedTextProcessor:
             for c in text
         )
         
-        # Step 3: Reverse words ONLY if text contains presentation forms (visual order)
-        # If no presentation forms, assume text is already in logical order
+        # Step 3: Reverse ONLY if text contains presentation forms (visual order)
         if has_presentation_forms:
-            # Text is in visual order, need to reverse it
+            # Text is in visual order, need DOUBLE REVERSAL
             words = normalized.split()
             result_words = []
             
+            # First: Reverse each word's characters
             for word in words:
                 # Check if word contains Arabic characters
                 has_arabic = any('\u0600' <= c <= '\u06FF' for c in word)
                 
                 if has_arabic:
-                    # Reverse the word to get logical order
+                    # Reverse the character order within the word
+                    # ﺔﻤﻠﻛ → كلمة
                     reversed_word = word[::-1]
                     result_words.append(reversed_word)
                 else:
                     # Keep non-Arabic words as-is (numbers, punctuation, English)
                     result_words.append(word)
+            
+            # Second: Reverse the order of words in the sentence
+            # [العام, الأمين, كلمة] → [كلمة, الأمين, العام]
+            result_words.reverse()
             
             return ' '.join(result_words)
         else:

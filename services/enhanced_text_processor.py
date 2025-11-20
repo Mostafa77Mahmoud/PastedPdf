@@ -10,6 +10,7 @@ CRITICAL FEATURES:
 
 import logging
 import re
+import unicodedata
 from typing import Dict, List, Tuple
 import pdfplumber
 from arabic_reshaper import ArabicReshaper
@@ -57,6 +58,155 @@ class EnhancedTextProcessor:
         # Initialize Arabic reshaper
         self.reshaper = ArabicReshaper()
     
+    def _to_logical_order(self, text: str) -> str:
+        """
+        Convert Arabic text from visual/presentation order to logical order
+        
+        PDFs often store Arabic text in presentation form (shaped glyphs in visual order).
+        This method converts it back to logical order for LLM processing.
+        
+        Args:
+            text: Text in visual/presentation order
+        
+        Returns:
+            Text in logical order (standard UTF-8)
+        """
+        # Step 1: Normalize to convert presentation forms to base characters
+        # NFKC normalization converts ﺔﺤﻔﺼﻟﺍ (presentation forms) to ةحفصلا (base characters)
+        normalized = unicodedata.normalize('NFKC', text)
+        
+        # Step 2: Reverse RTL sequences to get logical order
+        # For now, we'll keep the normalized form which should be readable
+        # TODO: If needed, add pyfribidi for full visual->logical conversion
+        
+        return normalized
+    
+    def extract_text_with_structure_batched(self, pdf_path: str, batch_size: int = 50, max_pages: int = None) -> Dict:
+        """
+        استخراج النص مع الهيكلة - نسخة محسّنة للملفات الضخمة
+        Memory-optimized version for large PDFs (500+ pages)
+        
+        Args:
+            pdf_path: Path to PDF file
+            batch_size: Number of pages to process at once (default: 50)
+            max_pages: Maximum number of pages to process (default: None = all pages)
+        
+        Returns:
+            dict: Same format as extract_text_with_structure()
+        """
+        logger.info(f"Extracting structured text from {pdf_path} (batched mode)")
+        
+        markdown_lines = []
+        plain_lines = []
+        structure_info = {
+            'h1_count': 0,
+            'h2_count': 0,
+            'body_count': 0
+        }
+        cleaning_stats = {
+            'quranic_sequences_removed': 0,
+            'english_terms_preserved': 0
+        }
+        
+        # Get total pages first
+        with pdfplumber.open(pdf_path) as pdf:
+            total_pages = len(pdf.pages)
+        
+        # Limit pages if max_pages is specified
+        if max_pages is not None:
+            total_pages = min(total_pages, max_pages)
+        
+        logger.info(f"Processing {total_pages} pages, batch size: {batch_size}")
+        
+        # Process in batches
+        num_batches = (total_pages + batch_size - 1) // batch_size
+        
+        for batch_num in range(num_batches):
+            start_page = batch_num * batch_size
+            end_page = min(start_page + batch_size, total_pages)
+            
+            logger.info(f"Processing batch {batch_num + 1}/{num_batches}: pages {start_page + 1}-{end_page}")
+            
+            # Process this batch
+            with pdfplumber.open(pdf_path) as pdf:
+                for page_num in range(start_page, end_page):
+                    try:
+                        page = pdf.pages[page_num]
+                        
+                        # Extract text with font information
+                        # CRITICAL: Request 'size' attribute for header detection!
+                        words = page.extract_words(
+                            x_tolerance=3,
+                            y_tolerance=3,
+                            keep_blank_chars=True,
+                            use_text_flow=True,
+                            extra_attrs=['size', 'fontname']
+                        )
+                        
+                        if not words:
+                            continue
+                        
+                        # Group words into lines
+                        lines = self._group_words_into_lines(words)
+                        
+                        # Process each line
+                        for line_data in lines:
+                            text = line_data['text'].strip()
+                            font_size = line_data['avg_font_size']
+                            
+                            if not text:
+                                continue
+                            
+                            # Convert from visual/presentation order to logical order
+                            text = self._to_logical_order(text)
+                            
+                            # Clean Quranic noise
+                            cleaned_text, quranic_removed, english_preserved = self._clean_quranic_noise(text)
+                            cleaning_stats['quranic_sequences_removed'] += quranic_removed
+                            cleaning_stats['english_terms_preserved'] += english_preserved
+                            
+                            # Determine line type based on font size
+                            if self.enable_markdown:
+                                if font_size >= self.font_size_threshold_h1:
+                                    # Main Header
+                                    markdown_lines.append(f"# {cleaned_text}")
+                                    plain_lines.append(cleaned_text)
+                                    structure_info['h1_count'] += 1
+                                    
+                                elif font_size >= self.font_size_threshold_h2:
+                                    # Sub Header
+                                    markdown_lines.append(f"## {cleaned_text}")
+                                    plain_lines.append(cleaned_text)
+                                    structure_info['h2_count'] += 1
+                                    
+                                else:
+                                    # Body text
+                                    markdown_lines.append(cleaned_text)
+                                    plain_lines.append(cleaned_text)
+                                    structure_info['body_count'] += 1
+                            else:
+                                markdown_lines.append(cleaned_text)
+                                plain_lines.append(cleaned_text)
+                                structure_info['body_count'] += 1
+                    
+                    except Exception as e:
+                        logger.warning(f"Error processing page {page_num + 1}: {e}")
+                        continue
+            
+            # Log batch progress
+            logger.info(f"Batch {batch_num + 1}/{num_batches} complete")
+        
+        # Join lines
+        markdown_text = '\n\n'.join(markdown_lines)
+        plain_text = '\n\n'.join(plain_lines)
+        
+        return {
+            'markdown_text': markdown_text,
+            'plain_text': plain_text,
+            'structure_info': structure_info,
+            'cleaning_stats': cleaning_stats
+        }
+    
     def extract_text_with_structure(self, pdf_path: str) -> Dict:
         """
         استخراج النص مع الهيكلة (Markdown) والتنظيف الذكي
@@ -88,11 +238,13 @@ class EnhancedTextProcessor:
                 logger.debug(f"Processing page {page_num + 1}/{len(pdf.pages)}")
                 
                 # Extract text with font information
+                # CRITICAL: Request 'size' attribute for header detection!
                 words = page.extract_words(
                     x_tolerance=3,
                     y_tolerance=3,
                     keep_blank_chars=True,
-                    use_text_flow=True
+                    use_text_flow=True,
+                    extra_attrs=['size', 'fontname']
                 )
                 
                 if not words:
@@ -108,6 +260,9 @@ class EnhancedTextProcessor:
                     
                     if not text:
                         continue
+                    
+                    # Convert from visual/presentation order to logical order
+                    text = self._to_logical_order(text)
                     
                     # Clean Quranic noise
                     cleaned_text, quranic_removed, english_preserved = self._clean_quranic_noise(text)

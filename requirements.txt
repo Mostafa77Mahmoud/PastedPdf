@@ -50,3 +50,16 @@ python-bidi
 PyYAML
 regex
 tqdm
+arabic-reshaper
+numpy
+ocrmypdf
+opencv-python-headless
+pdfplumber
+Pillow
+PyMuPDF
+PyPDF2
+pytesseract
+python-bidi
+PyYAML
+regex
+tqdm

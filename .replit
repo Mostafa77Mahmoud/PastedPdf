@@ -1,2 +1,7 @@
+modules = ["python-3.11"]
 [agent]
 expertMode = true
+
+[nix]
+channel = "stable-25_05"
+packages = ["freetype", "ghostscript", "gumbo", "harfbuzz", "jbig2dec", "jbig2enc", "lcms2", "libimagequant", "libjpeg", "libjpeg_turbo", "libtiff", "libwebp", "libxcrypt", "libyaml", "mupdf", "openjpeg", "pngquant", "swig", "tcl", "tesseract", "tk", "unpaper", "xcbuild", "zlib", "poppler"]

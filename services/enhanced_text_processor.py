@@ -307,15 +307,25 @@ class EnhancedTextProcessor:
         return bidi_text
     
     def save_markdown_file(self, markdown_text: str, output_path: str):
-        """حفظ الملف بصيغة Markdown مع UTF-8"""
+        """
+        حفظ الملف بصيغة Markdown مع UTF-8
+        
+        IMPORTANT: Saves text in LOGICAL ORDER (standard UTF-8)
+        NO bidi/reshaping applied - this is correct for LLM processing
+        """
         
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(markdown_text)
         
-        logger.info(f"Saved Markdown file to {output_path}")
+        logger.info(f"Saved Markdown file to {output_path} (Logical Order)")
     
     def save_rtl_text_file(self, text: str, output_path: str):
-        """حفظ ملف نصي مع تنسيق RTL صحيح"""
+        """
+        حفظ ملف نصي مع تنسيق RTL صحيح
+        
+        IMPORTANT: Applies bidi/reshaping for VISUAL ORDER
+        This file is for human reading only, NOT for LLM processing
+        """
         
         # Apply RTL formatting
         rtl_text = self.apply_rtl_formatting(text)
@@ -323,4 +333,4 @@ class EnhancedTextProcessor:
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(rtl_text)
         
-        logger.info(f"Saved RTL text file to {output_path}")
+        logger.info(f"Saved RTL text file to {output_path} (Visual Order for human reading)")

@@ -1,0 +1,39 @@
+العمل الذي قام به الوكيل مذهل واحترافي جداً. لقد نفذ استراتيجية "القائمة البيضاء" (Whitelist) للمصطلحات الإنجليزية، وهذا أذكى حل تقني ممكن للحفاظ على كلمات مثل (Sukuk, Murabaha) وحذف "القمامة النصية" الناتجة عن خطوط القرآن.
+لكن، توقف لحظة واحدة قبل التشغيل الكامل!
+هناك نقطتان فنيتان دقيقتان جدًا (Fine-tuning) إذا لم تضبطهما الآن، قد يخرج الملف "نصاً واحداً متصلاً" بدون عناوين، أو تخرج العناوين في غير مكانها.
+ما الذي ينقصك؟ (Checklist قبل الإطلاق)
+1. فخ "حجم الخط" (Font Size Calibration)
+الوكيل وضع إعدادات افتراضية في config.yaml:
+العنوان الرئيسي (H1) = حجم 16
+العنوان الفرعي (H2) = حجم 14
+المشكلة: ماذا لو كان ملف الـ PDF الخاص بك يستخدم حجم 12 للعناوين و 10 للنص العادي؟
+النتيجة: السكريبت لن يجد أي نص بحجم 14 أو 16، وبالتالي لن يضع أي علامات هاشتاج (#)، وسيخرج الملف كنص سردي ممل (Plain Text) ولن يستفيد Gemini من الهيكلة.
+الحل: يجب أن نطلب من الوكيل "تحليل" الملف أولاً ليخبرنا ما هي أحجام الخطوط المستخدمة فعلياً.
+2. فخ "اتجاه النص" (Logical vs Visual)
+الوكيل ذكر أنه استخدم arabic-reshaper و bidi.
+هذا ممتاز للملفات التي سيقرأها البشر (filename_rtl.txt).
+لكن بالنسبة لـ Gemini (ملف _structured.md)، نحن نحتاج النص بترتيبه المنطقي (Logical Order) كما يُكتب على الكيبورد، وليس كما يُرسم على الشاشة. إذا قام السكريبت بـ "قلب" النص في ملف الـ Markdown، سيقرأه Gemini بالمقلوب وتضعف النتائج.
+الخطوة الأخيرة: البرومبت الذهبي (Calibration & Verification)
+انسخ هذا البرومبت وضعه للوكيل الآن لضبط هذه الإعدادات قبل معالجة الملف بالكامل:
+code
+Markdown
+The implementation looks solid! However, I need to calibrate the `config.yaml` parameters to match my specific PDF before processing the whole file.
+
+Please create a small utility script or mode called `analyze_fonts.py` that does the following:
+
+1.  **Font Analysis:**
+    *   Reads the first 5 pages of the PDF.
+    *   Prints out a "Frequency Distribution" of font sizes found in the document.
+    *   *Example Output:* "Size 10.5: 80% of text (Body), Size 12.0: 10% (Likely Headers), Size 14.5: 5% (Likely Titles)".
+    *   This will help me set the correct `h1_font_size` and `h2_font_size` in the config.
+
+2.  **Logical Order Verification:**
+    *   Please confirm that the `_structured.md` output file will keep the Arabic text in **Logical Order** (standard UTF-8) for LLM processing, and ONLY apply the `bidi/reshaping` to the `_rtl.txt` file intended for human reading. LLMs prefer standard logical text.
+
+3.  **Run the Analysis:**
+    *   Run this analysis on the file I uploaded and suggest the best values for `h1_font_size` and `h2_font_size`.
+ماذا سيحدث بعد هذا البرومبت؟
+سيقوم الوكيل بفحص ملفك ويقول لك مثلاً: "يا صديقي، النص العادي حجمه 11، والعناوين حجمها 13.5".
+بناءً على ذلك، ستطلب منه تعديل config.yaml لتكون h2_font_size: 13.
+بذلك تضمن 100% أن العناوين سيتم التقاطها وتمييزها بـ ##، مما يعطيك "الأداء القوي" الذي تبحث عنه مع Gemini.
+توكل على الله، هذا المشروع واعد جداً!

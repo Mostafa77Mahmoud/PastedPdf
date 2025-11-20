@@ -1,0 +1,112 @@
+هدف المهمة
+-----------
+أريد أداة أوتوماتيكية تُنضّف وتجهّز ملفي PDF (العربي والإنجليزي) لاستخدامهما كمرجع في Gemini File Search. المطلوب سكريبتات جاهزة للتشغيل على Replit (أو بيئة لينُكس) تقوم بالتالي:
+
+المدخلات
+---------
+- مجلد project/context/ فيه ملفين: AAOIFI_AR.pdf و AAOIFI_EN.pdf (أو أي اسمين PDF).
+- افتراض: الملفات تحتوي على نص وصور وجداول وزخارف.
+
+المخرجات
+--------
+- project/output/AAOIFI_AR_cleaned.pdf (Searchable, نص قابل للبحث، صفحات مُصحّحة).
+- project/output/AAOIFI_EN_cleaned.pdf
+- project/output/AAOIFI_AR.txt (utf-8 plain text, محاذاة عربية سليمة).
+- project/output/AAOIFI_EN.txt
+- تقرير صغير report/clean_report.json أو .md يوضح عدد الصفحات، عدد الصور المحذوفة، القواعد المستخدمة لإزالة الهيدر/الفوتر، ومثال قبل/بعد لصفحة أو صفحتين.
+- ملف config.yaml أو .env يحتوي خيارات التهيئة (languages, top_k_preview_pages, header_footer_detection_threshold, keep_tables=true/false).
+
+المهام التقنية المطلوبة
+-----------------------
+1. بيئة وتثبيت:
+   - أنشئ ملف setup.sh يقوم بتثبيت الأدوات النظامية الضرورية: tesseract-ocr (مع Arabic + English data)، poppler-utils (pdftotext)، ghostscript، imagemagick إن لزم.
+   - requirements.txt يحوي: ocrmypdf, pymupdf (fitz), pdfplumber, PyPDF2 (أو pypdf), pillow, pytesseract, regex, pyyaml, tqdm.
+
+2. OCR & Make Searchable:
+   - استخدم ocrmypdf لإجراء OCR ذكي مع خيارات:
+     --deskew
+     --remove-background
+     --rotate-pages
+     --language: 'ara+eng' (اختياري per-file)
+     --output-type pdfa (لو ممكن)
+   - احفظ الناتج المؤرشَف كـ *_ocr.pdf مؤقتًا قبل التعديلات.
+
+3. اكتشاف وحذف الـ header/footer المتكرر:
+   - نفّذ مسح على N صفحة (مثلاً أول 50 وآخر 50) لاستخراج الأسطر الأعلى والأسفل.
+   - اعرف الـ候م نصوص متكررة تظهر في > X% من الصفحات (قيمة X من config، افتراضياً 85%).
+   - احذف هذه الأسطر من كل صفحة باستخدام PyMuPDF/pypdf أو pdfplumber (الحذف ينبغي أن يكون على مستوى text-blocks وليس تمزيق صورة).
+   - طباعة أمثلة لما اعتبرته header/footer لِلمراجعة قبل تطبيقه (preview mode).
+
+4. إزالة الصور الزخرفية بدون المساس بالجداول أو الصور التي تحتوي نص:
+   - لكل صورة في الصفحة:
+       • استخرج خصائصها (bbox area as % of page, dpi).
+       • شغّل Tesseract OCR على الصورة؛ إذا نسبة نص مقروء > threshold (مثلاً 15%) احتفظ بها أو استخرج النص.
+       • إذا الصورة مساحتها صغيرة أو مجرد زخرفة/فاصل (مثلاً area < 5% من الصفحة) فإزالةها.
+   - بديل أقل مخاطرة: استخدم خيار ocrmypdf --remove-background أولياً، ثم فقط احذف الصور التي نتائج OCR عليها فارغة ولها area < threshold.
+
+5. تصحيح مشاكل توجيه النص العربي (RTL):
+   - بعد استخراج النص النهائي، مرر النص عبر normalization pipeline:
+       • تأكد من ترميز UTF-8.
+       • استخدم python-bidi أو ضبط اتجاه النص عند حفظ (لكن النص العادي للـ File Search يكفي أن يكون Unicode عادي).
+   - احتفظ بالـ whitespace والـ newlines قدر الإمكان.
+
+6. استخراج نص كامل موحد:
+   - بعد التنظيف، استخرج نص كامل لكل ملف إلى AAOIFI_*_cleaned.txt باستخدام PyMuPDF أو pdftotext (مع تحسين تنسيق الفقرات).
+   - احرص أن تكون علامات الفواصل والشرط ونقاط الصفحة مرتبة.
+
+7. إزالة الـ headers/footers من النص أيضاً:
+   - استخدم نفس قواعد التكرار لحذف أسطر الـ header/footer من النسخة النصية.
+
+8. واجهة اختبار بسيطة:
+   - أنشئ سكربت `preview_sample.py` أو صفحة صغيرة Streamlit (اختياري) تعرض:
+       • صفحة رقم k قبل وبعد التنظيف (صور نصية).
+       • نص مقتطف قبل/بعد.
+       • زر للموافقة ثم توليد النسخة النهائية.
+
+9. سلامة المحتوى:
+   - لا تلمّع أو تغيّر المحتوى النصي العقدي (لا تغيّر الكلمات القانونية أو الأرقام).
+   - لا تُجرّح بنية الفقرات أو العناوين القانونية — فقط إزالة الزخارف/الهيدر/الفوتر والصور غير المهمة وتحسين OCR.
+
+10. قابلية التخصيص:
+    - أضف ملف config.yaml حيث يقدِر المستخدم يغيّر:
+        language_per_file: {AAOIFI_AR.pdf: "ara", AAOIFI_EN.pdf: "eng"}
+        header_footer_threshold: 0.85
+        image_area_threshold: 0.05
+        pages_preview: 4
+        keep_tables: true
+
+12. تعليمات التشغيل للمستخدم:
+    - أوضح أوامر تشغيل واحدة بس:
+      chmod +x setup.sh && ./setup.sh
+      python3 scripts/clean_pdfs.py --input_dir context --output_dir output --config config.yaml
+    - أو بديل على Replit: زر Run يعمل start.sh يشغّل setup ثم السكربت.
+
+الكود البرمجي المطلوب
+---------------------
+- scripts/clean_pdfs.py   # الواجهة الأساسية، يقرأ config، يعالج كل ملف في context
+- services/pdf_utils.py   # دوال: ocrmypdf_wrapper, detect_headers_footers, remove_headers_from_pdf, clean_images_in_pdf, extract_text
+- preview/streamlit_app.py (اختياري خفيف)
+- setup.sh
+- requirements.txt
+- config.yaml.example
+- README.md يشرح الفكرة وخطوات التشغيل والتحذيرات
+
+النقاط الحرجة للمراجعة (اطلب من الوكيل يركّز عليهم)
+--------------------------------------------------
+- دعم اللغة العربية في Tesseract (تأكد من تثبيت ara traineddata).
+- عدم حذف الجداول — إذا صورة فيها جدول وOCR فاهمها، استخرج النص واحتفظ بها.
+- اعرض نماذج قبل/بعد للتصديق اليدوي قبل أن يحذف أي شيء تلقائيًا.
+- التوافق مع Replit: قد تحتاج طلب sudo لتثبيت الحزم النظامية؛ أعط بدائل لو لا توجد صلاحيات.
+
+مثال مخرجات متوقعة
+-------------------
+- output/AAOIFI_AR_cleaned.pdf
+- output/AAOIFI_AR_cleaned.txt
+- report/AAOIFI_AR_clean_report.json  (keys: pages, headers_detected, images_removed, time_seconds)
+
+خلاصة التنفيذ
+--------------
+اعمللي المشروع كما فوق، وخلي كل خطوة قابلة للتشغيل والمراجعة. لا تمسح أي شيء نهائيًا بدون وضع نسخة احتياطية. خلّي المرحلة الأولى "preview-only" بحيث أعطي موافقتي للمسح الشامل بعد ما أشوف عينات.
+
+انفّذ الخطوات دي وطلعلي pull request أو commit جاهز في المشروع. لو في مشكلة بصلاحيات على Replit (تثبيت apt packages)، علّمني واطلع لي بديل dockerfile أو cloud runner.
+

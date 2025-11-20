@@ -73,34 +73,40 @@ class EnhancedTextProcessor:
         """
         # Step 1: Normalize to convert presentation forms to base characters
         # NFKC normalization converts ﺔﺤﻔﺼﻟﺍ (presentation forms) to ةحفصلا (base characters)
+        # NFKD also works, but NFKC is more compact
         normalized = unicodedata.normalize('NFKC', text)
         
-        # Step 2: Remove duplicate consecutive characters (common in this PDF)
-        # "ةةييععررششللاا" -> "ةيعرشلا"
-        deduplicated = []
-        for i, char in enumerate(normalized):
-            if i == 0 or char != normalized[i-1]:
-                deduplicated.append(char)
-        deduplicated_text = ''.join(deduplicated)
+        # Step 2: Check if text is in presentation forms (visual order)
+        # Presentation forms are in range U+FB50–U+FDFF and U+FE70–U+FEFF
+        has_presentation_forms = any(
+            ('\uFB50' <= c <= '\uFDFF') or ('\uFE70' <= c <= '\uFEFF') 
+            for c in text
+        )
         
-        # Step 3: Reverse Arabic words to convert from visual to logical order
-        # "ةيعرشلا" (visual) -> "الشرعية" (logical)
-        words = deduplicated_text.split()
-        result_words = []
-        
-        for word in words:
-            # Check if word contains Arabic characters
-            has_arabic = any('\u0600' <= c <= '\u06FF' for c in word)
+        # Step 3: Reverse words ONLY if text contains presentation forms (visual order)
+        # If no presentation forms, assume text is already in logical order
+        if has_presentation_forms:
+            # Text is in visual order, need to reverse it
+            words = normalized.split()
+            result_words = []
             
-            if has_arabic:
-                # Reverse the word to get logical order
-                reversed_word = word[::-1]
-                result_words.append(reversed_word)
-            else:
-                # Keep non-Arabic words as-is
-                result_words.append(word)
-        
-        return ' '.join(result_words)
+            for word in words:
+                # Check if word contains Arabic characters
+                has_arabic = any('\u0600' <= c <= '\u06FF' for c in word)
+                
+                if has_arabic:
+                    # Reverse the word to get logical order
+                    reversed_word = word[::-1]
+                    result_words.append(reversed_word)
+                else:
+                    # Keep non-Arabic words as-is (numbers, punctuation, English)
+                    result_words.append(word)
+            
+            return ' '.join(result_words)
+        else:
+            # Text is already in logical order (no presentation forms)
+            # Just normalize and return
+            return normalized
     
     def extract_text_with_structure_batched(self, pdf_path: str, batch_size: int = 50, max_pages: int = None) -> Dict:
         """
@@ -178,7 +184,8 @@ class EnhancedTextProcessor:
                             if not text:
                                 continue
                             
-                            # Convert from visual/presentation order to logical order
+                            # Convert from visual/presentation order to logical order (if needed)
+                            # The function auto-detects presentation forms and only reverses when necessary
                             text = self._to_logical_order(text)
                             
                             # Clean Quranic noise
@@ -282,7 +289,8 @@ class EnhancedTextProcessor:
                     if not text:
                         continue
                     
-                    # Convert from visual/presentation order to logical order
+                    # Convert from visual/presentation order to logical order (if needed)
+                    # The function auto-detects presentation forms and only reverses when necessary
                     text = self._to_logical_order(text)
                     
                     # Clean Quranic noise

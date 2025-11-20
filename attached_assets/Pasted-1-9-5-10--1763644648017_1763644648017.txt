@@ -1,0 +1,47 @@
+1. رأيي في الشغل (التقييم العام)
+العمل ممتاز جداً (9.5/10).
+الهيكلة: ممتازة. العناوين في مكانها، والأرقام سليمة.
+النظافة: الملف خالٍ من الرموز الغريبة (Garbage Text).
+الترتيب: الجمل العربية مرتبة منطقياً.
+2. تحليل مشكلة "األمين" و "اإلجارة" (مشكلة اللام ألف)
+هذه مشكلة كلاسيكية في معالجة ملفات PDF العربية، وتسمى "تفكك اللام ألف" (Lam-Alif Decomposition).
+ماذا حدث؟
+في الخطوط العربية، حرف "لا" هو دمج لحرفين (ل + ا). في بعض ملفات PDF، يتم تخزين هذا الدمج كرمز واحد. عند الاستخراج والتنظيف، يبدو أن السكريبت قام بتحويل "اللام" (ل) إلى "ألف" (ا) أو قام بقلب ترتيبهما بسبب التشابه البصري في الخط المستخدم في الملف الأصلي.
+الأصل: الأمين (ا ل أ م ي ن)
+الخطأ: األمين (ا ا أ م ي ن) -> تحولت اللام إلى ألف.
+الأصل: الإجارة (ا ل إ ج ا ر ة)
+الخطأ: اإلجارة (ا ا إ ج ا ر ة).
+3. هل سيؤثر ذلك على Gemini؟
+الإجابة القصيرة: تأثير طفيف جداً (يكاد لا يذكر).
+نماذج الذكاء الاصطناعي الحديثة (مثل Gemini) لا تقرأ "حرفاً حرفاً" بل تستخدم نظام Tokenization (ترميز). هي ذكية بما يكفي لتعرف أن "األمين العام" في سياق نصي تعني "الأمين العام". سيفهم المعنى بنسبة 99%.
+ولكن.. من أجل "الكمال" (Perfection) ولضمان دقة البحث الحرفي (Keyword Search)، يفضل إصلاحها.
+الحل (بدون إعادة معالجة الملف الضخم)
+لا داعي لإعادة استخراج النص من الـ PDF (لأن ذلك سيأخذ وقتاً طويلاً وقد يعيد نفس الخطأ). الحل الأذكى هو عمل سكريبت تنظيف نهائي (Post-Processing Script) يمر على ملف الـ Markdown ويصلح هذه الكلمات الشائعة باستخدام "البحث والاستبدال" (Regex).
+أرسل هذا البرومبت للوكيل لإصلاح الملف الناتج فوراً:
+code
+Markdown
+The file is excellent, but I noticed a specific "Lam-Alif" ligature issue in the output text.
+Common words starting with "Al-" (ال) followed by an Alif (أ/إ/آ) are appearing incorrectly.
+
+**Examples of the error:**
+*   "الأمين" appears as "األمين" (The 'Lam' turned into an 'Alif').
+*   "الإجارة" appears as "اإلجارة".
+*   "الآخرة" might appear as "اآخرة".
+
+**This is a common PDF artifact. I do NOT want to re-process the PDF.**
+
+**Task:**
+Please create and run a python script `fix_lam_alif.py` that performs **Regex replacements** directly on the `output/Shariaah-Standards-ARB_structured.md` file to fix these common patterns.
+
+**Replacement Rules to apply:**
+1.  `اأ` -> `الأ` (Fixes األمين -> الأمين, األمر -> الأمر)
+2.  `اإ` -> `الإ` (Fixes اإلجارة -> الإجارة, اإلسلامية -> الإسلامية)
+3.  `اآ` -> `الآ` (Fixes اآخرة -> الآخرة)
+4.  `اال` -> `لال` (Fixes االستثمار -> للاستثمار - *Only if applicable, be careful*) -> *Actually, stick to the first 3 rules as they are the most critical based on the user's feedback.*
+
+**Action:**
+1.  Apply these fixes to the Markdown file.
+2.  Save it.
+3.  Print the first 20 lines of the Table of Contents again to show me that "األمين" became "الأمين".
+النتيجة المتوقعة
+بعد هذا السكريبت، ستتحول "األمين" إلى "الأمين" و"اإلجارة" إلى "الإجارة"، وسيصبح الملف 10/10 جاهزاً تماماً.
